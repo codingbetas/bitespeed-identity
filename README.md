@@ -1,47 +1,55 @@
-🧩 Bitespeed Identity Reconciliation Service
-📌 Overview
+# 🧩 Bitespeed Identity Reconciliation Service
+
+## 📌 Overview
 
 This service implements identity reconciliation logic similar to the backend task from Bitespeed.
 
 It links contacts based on shared email addresses and/or phone numbers.
 
-If multiple records belong to the same person, they are grouped under a single primary contact.
+If multiple records belong to the same person, they are grouped under a single **primary contact**.
 
-🚀 Tech Stack
+---
 
-FastAPI
+## 🚀 Tech Stack
 
-SQLAlchemy
+- FastAPI
+- SQLAlchemy
+- SQLite
+- Python 3.12
 
-SQLite
+---
 
-Python 3.12
+## ⚙️ How It Works
 
-⚙️ How It Works
+- Each contact is stored in a `contacts` table.
+- If two contacts share the same email or phone number, they are linked.
+- A graph traversal (**BFS**) is used to collect all related contacts.
+- The **oldest contact** in the group becomes the primary.
+- All others are marked as secondary.
+- New records are created only when new email/phone information appears.
 
-Each contact is stored in a contacts table.
+---
 
-If two contacts share the same email or phone number, they are linked.
+## 📥 API Endpoint
 
-A graph traversal (BFS) is used to collect all related contacts.
+### `POST /identify`
 
-The oldest contact in the group becomes the primary.
+### Request Body
 
-All others are marked as secondary.
-
-New records are created only when new email/phone information appears.
-
-📥 API Endpoint
-POST /identify
-Request Body
+```json
 {
   "email": "string (optional)",
   "phoneNumber": "string (optional)"
 }
+```
 
-At least one field is required.
+> At least one field is required.
 
-📤 Response
+---
+
+## 📤 Response
+
+```json
 {
   "contact": {
     "primaryContactId": 1,
@@ -50,33 +58,53 @@ At least one field is required.
     "secondaryContactIds": [2, 3]
   }
 }
-🧠 Identity Resolution Logic
+```
 
-Search existing contacts matching email or phone.
+---
 
-Use BFS traversal to find full connected component.
+## 🧠 Identity Resolution Logic
 
-Select oldest contact as primary.
+1. Search existing contacts matching email or phone.
+2. Use BFS traversal to find full connected component.
+3. Select oldest contact as primary.
+4. Demote other primaries to secondary.
+5. Create new secondary if new information appears.
+6. Return consolidated response.
 
-Demote other primaries to secondary.
+---
 
-Create new secondary if new information appears.
+## ▶️ Running Locally
 
-Return consolidated response.
+### 1️⃣ Create virtual environment
 
-▶️ Running Locally
-1️⃣ Create virtual environment
+```bash
 python -m venv venv
 venv\Scripts\activate
-2️⃣ Install dependencies
+```
+
+### 2️⃣ Install dependencies
+
+```bash
 pip install -r requirements.txt
-3️⃣ Start server
+```
+
+### 3️⃣ Start server
+
+```bash
 uvicorn app.main:app --reload
+```
 
 Open:
 
+```
 http://127.0.0.1:8000/docs
-📂 Project Structure
+```
+
+---
+
+## 📂 Project Structure
+
+```
 bitespeed-identity/
 │
 ├── app/
@@ -88,16 +116,15 @@ bitespeed-identity/
 ├── requirements.txt
 ├── .gitignore
 └── README.md
-✅ Features Implemented
+```
 
-New contact creation
+---
 
-Primary-secondary linking
+## ✅ Features Implemented
 
-Multiple primary merge handling
-
-Chain linking
-
-Deterministic primary selection
-
-Response validation with Pydantic
+- New contact creation
+- Primary-secondary linking
+- Multiple primary merge handling
+- Chain linking
+- Deterministic primary selection
+- Response validation with Pydantic
