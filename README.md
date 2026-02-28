@@ -1,45 +1,48 @@
 # 🧩 Bitespeed Identity Reconciliation Service
 
-## 📌 Overview
+A high-performance backend service built with FastAPI that implements identity reconciliation logic. It links multiple contact points (email, phone) into a single unified customer identity.
 
-This service implements identity reconciliation logic similar to the backend task from Bitespeed.
-
-It links contacts based on shared email addresses and/or phone numbers.
-
-If multiple records belong to the same person, they are grouped under a single **primary contact**.
+🌐 **Live Demo:** [https://bitespeed-identity-29am.onrender.com/docs](https://bitespeed-identity-29am.onrender.com/docs)  
+*(Note: Please allow ~60 seconds for the initial spin-up on the Render free tier.)*
 
 ---
+
+## 📌 Overview
+This service solves the problem of "fragmented" identities. When a customer uses different contact information across multiple orders, this service:
+1.  **Identifies** if the new information belongs to an existing user.
+2.  **Links** new emails or phone numbers as "secondary" contacts.
+3.  **Merges** two previously separate primary contacts if a new order links them together.
 
 ## 🚀 Tech Stack
-
-- FastAPI
-- SQLAlchemy
-- SQLite
-- Python 3.12
+* **Framework:** FastAPI (Python 3.12)
+* **Database:** SQLite (SQLAlchemy ORM)
+* **Validation:** Pydantic
+* **Deployment:** Render (CI/CD via GitHub)
 
 ---
 
-## ⚙️ How It Works
+## 🧠 Identity Resolution Logic
+The service uses a **Graph Traversal (BFS)** strategy to ensure 100% accuracy in complex linking scenarios:
+1.  **Search:** Queries the database for any records matching the incoming email or phoneNumber.
+2.  **Cluster Discovery:** Uses a Breadth-First Search (BFS) to find every connected contact in the database (handling "chain-links").
+3.  **Primary Selection:** The **oldest** record in the entire cluster (based on `createdAt`) is automatically designated as the **Primary** contact.
+4.  **Demotion:** Any other "primary" records in the cluster are demoted to **Secondary** and linked to the oldest record.
+5.  **New Information:** If the request contains a new email or phone number not seen in the cluster, a new **Secondary** record is created.
 
-- Each contact is stored in a `contacts` table.
-- If two contacts share the same email or phone number, they are linked.
-- A graph traversal (**BFS**) is used to collect all related contacts.
-- The **oldest contact** in the group becomes the primary.
-- All others are marked as secondary.
-- New records are created only when new email/phone information appears.
+
 
 ---
 
 ## 📥 API Endpoint
 
 ### `POST /identify`
+Consolidates contact information.
 
-### Request Body
-
+**Request Body:**
 ```json
 {
-  "email": "string (optional)",
-  "phoneNumber": "string (optional)"
+  "email": "mcfly@hillvalley.edu",
+  "phoneNumber": "123456"
 }
 ```
 
@@ -53,9 +56,9 @@ If multiple records belong to the same person, they are grouped under a single *
 {
   "contact": {
     "primaryContactId": 1,
-    "emails": ["email1@example.com", "email2@example.com"],
-    "phoneNumbers": ["1234567890"],
-    "secondaryContactIds": [2, 3]
+    "emails": ["doc@future.com", "mcfly@hillvalley.edu"],
+    "phoneNumbers": ["123456"],
+    "secondaryContactIds": [2]
   }
 }
 ```
@@ -75,11 +78,13 @@ If multiple records belong to the same person, they are grouped under a single *
 
 ## ▶️ Running Locally
 
-### 1️⃣ Create virtual environment
+### 1️⃣ 1️⃣ Clone and Setup
 
 ```bash
+git clone [https://github.com/codingbetas/bitespeed-identity.git](https://github.com/codingbetas/bitespeed-identity.git)
+cd bitespeed-identity
 python -m venv venv
-venv\Scripts\activate
+source venv/bin/activate  # venv\Scripts\activate on Windows
 ```
 
 ### 2️⃣ Install dependencies
@@ -106,16 +111,14 @@ http://127.0.0.1:8000/docs
 
 ```
 bitespeed-identity/
-│
 ├── app/
-│   ├── main.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── database.py
-│
-├── requirements.txt
-├── .gitignore
-└── README.md
+│   ├── main.py        # API Routes & BFS Logic
+│   ├── models.py      # SQLAlchemy Database Models
+│   ├── schemas.py     # Pydantic Validation Models
+│   └── database.py    # Database Configuration
+├── requirements.txt   # Project Dependencies
+├── .gitignore         # venv and SQLite exclusion
+└── README.md          # Documentation
 ```
 
 ---
@@ -128,3 +131,13 @@ bitespeed-identity/
 - Chain linking
 - Deterministic primary selection
 - Response validation with Pydantic
+- [x] BFS-based Graph Traversal for Identity Mapping
+- [x] Automated Primary-to-Secondary demotion (Merging)
+- [x] Handling of null/missing fields
+- [x] Deterministic Primary selection based on seniority
+- [x] Live deployment with automated CI/CD
+
+---
+
+## ⚠️ Note on Persistence
+Since this service is hosted on **Render's Free Tier** using **SQLite**, the database is ephemeral. Data will be reset periodically when the instance spins down due to inactivity or during new deployments.
